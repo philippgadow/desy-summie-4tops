@@ -1,0 +1,47 @@
+# commands to replicate data/pheno_paper/img/1604.07421_fig3.png
+# scan in ct and mass for fixed theta1=pi/2
+import model Top_Philic_UFO
+define p = g u c d s u~ c~ d~ s~ b b~
+define j = u c d s u~ c~ d~ s~ b b~
+generate p p > t t~ v1/v1, v1 > t t~
+output proc_bsm4top-14TeV_ttv1_mv1-scan_wv1-auto_t1-scan_theta1-1p57
+launch
+# set shower, madspin decay or analysis
+shower=off
+analysis=off
+done
+###################################
+# set param and run card settings #
+###################################
+# mass of V1 top-philic resonance in GeV
+set Mv1 scan:[1000., 1100., 1200., 1300., 1400., 1600., 1800., 2000.]
+# width of V1 top-philic resonance in GeV
+# AUTO (default): automatic computation of minimal width
+set Wv1 AUTO
+# overall coupling strength ct
+set ct1 scan:[1., 2., 3., 4., 5.]
+# chirality parameter theta
+set theta1 1.5707963267948966
+#
+# PDF set (default: 315200=NNPDF31_lo_as_0130)
+set pdlabel lhapdf
+set lhaid 315200
+#
+# massless b-quarks in 5 flavour scheme
+set MB 0.
+# set beam energy to 14 TeV
+set ebeam1 7000.0
+set ebeam2 7000.0
+#
+set cut_decays False
+set event_norm sum
+set maxjetflavor 5
+set dynamical_scale_choice 3
+set auto_ptj_mjj False
+#
+set use_syst False
+set sys_scalefact None
+set sys_alpsfact None
+set sys_pdf NNPDF31_lo_as_0130
+#
+done

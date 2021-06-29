@@ -1,0 +1,49 @@
+import model Top_Philic_UFO
+define p = g u c d s u~ c~ d~ s~ b b~
+define j = u c d s u~ c~ d~ s~ b b~
+define top = t t~
+generate p p > top j v1/v1, v1 > t t~
+output proc_bsm4top-delphes-13TeV_tjv1_mv1-1500_wv1-auto_t1-1_theta1-0p79
+launch
+# set shower, madspin decay or analysis
+shower=Pythia8
+detector=Delphes
+done
+###################################
+# set param and run card settings #
+###################################
+# mass of V1 top-philic resonance in GeV
+set Mv1 1500.
+# width of V1 top-philic resonance in GeV
+# AUTO (default): automatic computation of minimal width
+set Wv1 AUTO
+# overall coupling strength ct
+set ct1 1
+# chirality parameter theta
+set theta1 0.78539816341250
+#
+# PDF set (default: 315200=NNPDF31_lo_as_0130)
+set pdlabel lhapdf
+set lhaid 315200
+#
+# massless b-quarks in 5 flavour scheme
+set MB 0.
+#
+set cut_decays False
+set event_norm sum
+set maxjetflavor 5
+set dynamical_scale_choice 3
+set auto_ptj_mjj False
+#
+set use_syst True
+set sys_scalefact None
+set sys_alpsfact None
+set sys_pdf NNPDF31_lo_as_0130
+#
+# set delphes card
+/home/hep/delphes/cards/DetectorCardFiles/delphes_card_ATLAS.tcl
+#
+# set number of events
+set nevents 20000
+#
+done

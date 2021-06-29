@@ -1,0 +1,6 @@
+Requestor: James Ferrando
+Content: Top-philic resonance (color singlet vector)
+Source: Author private communication; to be posted on FeynRules page
+Paper: http://arxiv.org/abs/1604.07421
+Webpage: http://feynrules.irmp.ucl.ac.be/wiki/Top-Philic-Zprime
+JIRA: https://its.cern.ch/jira/browse/AGENE-1602

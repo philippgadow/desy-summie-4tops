@@ -1,0 +1,40 @@
+import model Top-Philic_UFO_V1
+define p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+generate p p > t t~ v1/v1, v1 > t t~
+
+output proc_bsm4top_atlasufo_ttv1_mv1-1500_wv1-auto
+launch
+# set shower, madspin decay or analysis
+shower=Pythia8
+detector=Delphes
+done
+###################################
+# set param and run card settings #
+###################################
+# mass of V1 top-philic resonance in GeV
+set Mv1 1500
+# width of V1 top-philic resonance in GeV
+# AUTO (default): automatic computation of minimal width
+set Wv1 AUTO
+# overall coupling strength ct
+set ct1 1
+# no option to set chirality parameter theta, fixed in ATLAS UFO to pi/4
+# set theta1 cmath.pi/4.
+
+# PDF set (default: 315200=NNPDF31_lo_as_0130)
+set pdlabel lhapdf
+set lhaid 315200
+
+set cut_decays False
+set event_norm sum
+set maxjetflavor 4
+set dynamical_scale_choice 3
+set auto_ptj_mjj False
+
+set use_syst True
+set sys_scalefact None
+set sys_alpsfact None
+set sys_pdf NNPDF31_lo_as_0130
+
+done
