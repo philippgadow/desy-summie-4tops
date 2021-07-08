@@ -1,49 +1,21 @@
-import hist
-import vector
-import uproot
 import numpy as np
 import pandas as pd
-import mplhep as hep
-import matplotlib.pyplot as plt
+
 from argparse import ArgumentParser
 from tqdm import tqdm
+from utils import getDataFrame, cleanDataFrame
+from utils import visualizeBDTScore
 
 import torch
 from torch_geometric.data import Data, InMemoryDataset
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 
 def getArgumentParser():
     parser = ArgumentParser()
     parser.add_argument('inputFile')
     return parser
-
-
-def getDataFrame(filename, treename='LHEF'):
-    with uproot.open(filename) as f:
-        tree = f[treename]['Particle']
-        df = tree.arrays(["Particle.PID", "Particle.Mother1", "Particle.Mother2", "Particle.PT", "Particle.Eta", "Particle.Phi", "Particle.M"],
-            library="pd")
-    return df
-
-
-def cleanDataFrame(df):
-    df['resonance'] = df.apply(lambda row: row["Particle.Mother1"] == row["Particle.Mother2"], axis=1)
-    df = df[np.abs(df["Particle.PID"]) == 6]
-    df = df.drop(["Particle.Mother1", "Particle.Mother2", "Particle.PID"], axis=1)
-    return df
-
-
-def visualizeGraph(data, loss=None):
-    import networkx as nx
-    from torch_geometric.utils import to_networkx
-    G = to_networkx(data, to_undirected=True)
-    color=data.y
-    fig = plt.figure(figsize=(7,7))
-    plt.xticks([])
-    plt.yticks([])
-    nx.draw_networkx(G, pos=nx.spring_layout(G, seed=42), with_labels=True,
-                         node_color=color, cmap="Set2")
-    fig.savefig('test_graph.png')
 
 
 def doGNN(df):
@@ -216,8 +188,10 @@ def doGNN(df):
     from torch.utils.data import random_split
 
     def collate(items):
+        return items
         l = sum(items, [])
         return Batch.from_data_list(l)
+
 
     torch.manual_seed(0)
     valid_frac = 0.10
@@ -246,8 +220,10 @@ def doGNN(df):
     t = tqdm(range(0, n_epochs))
 
     for epoch in t:
-        loss = train(model, optimizer, train_loader, train_samples, batch_size,leave=bool(epoch==n_epochs-1))
-        valid_loss = test(model, valid_loader, valid_samples, batch_size,leave=bool(epoch==n_epochs-1))
+        # loss = train(model, optimizer, train_loader, train_samples, batch_size,leave=bool(epoch==n_epochs-1))
+        loss = train(model, optimizer, train_dataset, train_samples, batch_size,leave=bool(epoch==n_epochs-1))
+        # valid_loss = test(model, valid_loader, valid_samples, batch_size,leave=bool(epoch==n_epochs-1))
+        valid_loss = test(model, valid_dataset, valid_samples, batch_size,leave=bool(epoch==n_epochs-1))
         print('Epoch: {:02d}, Training Loss:   {:.4f}'.format(epoch, loss))
         print('           Validation Loss: {:.4f}'.format(valid_loss))
 
@@ -299,40 +275,63 @@ def doGNN(df):
 
 
 def doBDT(df):
+    from sklearn.model_selection import train_test_split
     from sklearn.ensemble import AdaBoostClassifier
     from sklearn.tree import DecisionTreeClassifier
+    from sklearn.metrics import classification_report, confusion_matrix
 
-    print(df.ndim)
+
+    target_names = ['resonance']
     y = df.pop('resonance').values
+    feature_names = ['Particle.PT', 'Particle.Eta', 'Particle.Phi', 'Particle.M']
+    X = df
+
+    # split in training and testing part
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8)
 
 
-    # bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=1),
-    #                          algorithm="SAMME",
-    #                          n_estimators=200)
+    # set up classifier
+    bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=3),
+                             algorithm="SAMME",
+                             n_estimators=200)
+    # train classifier
+    bdt.fit(X_train, y_train)
 
-    # bdt.fit(X, y)
+    # plot BDT score for training dataset
+    twoclass_output_train = bdt.decision_function(X_train)
+    class_names = ['resonance', 'spectator']
+    plot_colors = ['blue', 'orange']
+    plot_range = (twoclass_output_train.min(), twoclass_output_train.max())
+    visualizeBDTScore(twoclass_output_train, y_train, class_names, plot_range, plot_colors, 'bdt_score_train.png')
 
-    # twoclass_output = bdt.decision_function(X)
-    # plot_range = (twoclass_output.min(), twoclass_output.max())
-    # plt.subplot(122)
-    # for i, n, c in zip(range(2), class_names, plot_colors):
-    #     plt.hist(twoclass_output[y == i],
-    #              bins=10,
-    #              range=plot_range,
-    #              facecolor=c,
-    #              label='Class %s' % n,
-    #              alpha=.5,
-    #              edgecolor='k')
-    # x1, x2, y1, y2 = plt.axis()
-    # plt.axis((x1, x2, y1, y2 * 1.2))
-    # plt.legend(loc='upper right')
-    # plt.ylabel('Samples')
-    # plt.xlabel('Score')
-    # plt.title('Decision Scores')
+    # plot BDT score for test dataset
+    twoclass_output_test = bdt.decision_function(X_test)
+    plot_range = (twoclass_output_test.min(), twoclass_output_test.max())
+    visualizeBDTScore(twoclass_output_test, y_test, class_names, plot_range, plot_colors, 'bdt_score_test.png')
 
-    # plt.tight_layout()
-    # plt.subplots_adjust(wspace=0.35)
-    # plt.show()
+
+    # ROC curve
+    from sklearn.metrics import roc_auc_score, roc_curve
+    for i in range(1):
+        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], twoclass_output_test[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    # Compute micro-average ROC curve and ROC area
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), twoclass_output_test.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+    plt.figure()
+    lw = 2
+    plt.plot(fpr[2], tpr[2], color='darkorange',
+             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc[2])
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.show()
 
 
 def main():
@@ -342,9 +341,9 @@ def main():
     df = getDataFrame(args.inputFile)
     df = cleanDataFrame(df)
 
-    doGNN(df)
+    # doGNN(df)
 
-    # doBDT(df)
+    doBDT(df)
 
 
 
